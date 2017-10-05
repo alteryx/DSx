@@ -11,7 +11,6 @@ Hands on tutorials demonstrating the concepts of Prediction engineering, Feature
 ## Concepts to learn
 - `Prediction engineering`
 - `Feature engineering` 
-- `Deploying and using models` 
 
 ## Datasets 
 
