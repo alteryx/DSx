@@ -51,17 +51,17 @@ def train_xgb(X_train, labels):
     }
 
     model = xgb.train(params=params, dtrain=dtrain, num_boost_round=227,
-                      evals=evals, early_stopping_rounds=60, maximize=False,
+                      evals=evals, early_stopping_rounds=50, maximize=False,
                       verbose_eval=10)
 
-    print('Modeling RMSLE %.5f' % model.best_score)
+    print('Modeling RMSE %.5f' % model.best_score)
     return model
 
 
 def predict_xgb(model, X_test):
     dtest = xgb.DMatrix(X_test.values)
     ytest = model.predict(dtest)
-    X_test['trip_duration'] = np.exp(ytest) - 1
+    X_test['trip_duration'] = np.exp(ytest)-1
     return X_test[['trip_duration']]
 
 
@@ -77,14 +77,16 @@ def feature_importances(model, feature_names):
                                                                           ascending=False)
 
 
-def get_train_test_fm(feature_matrix):
-    X_train = feature_matrix[feature_matrix['test_data'] == False]
-    X_train = X_train.drop(['test_data'], axis=1)
-    y_train= X_train['trip_duration']
+def get_train_test_fm(feature_matrix,percentage):
+    nrows = feature_matrix.shape[0]
+    head = int(nrows * percentage)
+    tail = nrows-head
+    X_train = feature_matrix.head(head)
+    y_train = X_train['trip_duration']
     X_train = X_train.drop(['trip_duration'], axis=1)
-    X_test = feature_matrix[feature_matrix['test_data'] == True]
+    X_test = feature_matrix.tail(tail)
     y_test= X_test['trip_duration']
-    X_test = X_test.drop(['test_data', 'trip_duration'], axis=1)
+    X_test = X_test.drop(['trip_duration'], axis=1)
 
     return (X_train, y_train, X_test,y_test)
 
@@ -142,11 +144,20 @@ def make_label_times(item_purchases, invoices, cutoff_time, prediction_window, t
 
 
 def load_nyc_taxi_data():
-    trips = pd.read_csv('nyc-taxi-data/trips.csv', encoding='utf-8')
-    passenger_cnt = pd.read_csv('nyc-taxi-data/passenger_cnt.csv', encoding='utf-8')
-    vendors = pd.read_csv('nyc-taxi-data/vendors.csv', encoding='utf-8')
-    trips.drop("id.1", axis=1, inplace=True)
-    trips['pickup_datetime'] = pd.to_datetime(trips['pickup_datetime'] , format="%Y-%m-%d %H:%M:%S")
+    trips = pd.read_csv('nyc-taxi-data/trips.csv', 
+                        parse_dates=["pickup_datetime","dropoff_datetime"],
+                        dtype={'vendor_id':"category",'passenger_count':'int64'},
+                        encoding='utf-8')
+    passenger_cnt = pd.read_csv('nyc-taxi-data/passenger_cnt.csv',
+                                parse_dates=["first_trips_time"],
+                                dtype={'passenger_count':'int64'},
+                                encoding='utf-8')
+    vendors = pd.read_csv('nyc-taxi-data/vendors.csv', 
+                          parse_dates=["first_trips_time"],
+                          dtype={'vendor_id':"category"},
+                          encoding='utf-8')
+    #trips.drop("id.1", axis=1, inplace=True)
+    #trips['pickup_datetime'] = pd.to_datetime(trips['pickup_datetime'] , format="%Y-%m-%d %H:%M:%S")
     #vendors['first_trips_time'] = pd.to_datetime(vendors['first_trips_time'] , format="%Y-%m-%d %H:%M:%S")
     return trips, passenger_cnt, vendors 
 
