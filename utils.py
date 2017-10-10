@@ -3,6 +3,7 @@ import xgboost as xgb
 import numpy as np
 import pandas as pd
 import featuretools as ft
+from featuretools.primitives import (Day, Hour, Minute, Month, Weekday, Week, Weekend, Mean, Max, Min, Std, Skew)
 
 
 def read_data(TRAIN_DIR, TEST_DIR, nrows=None):
@@ -108,6 +109,19 @@ def duplicate_columns(frame):
                     break
     return dups
 
+def find_training_examples(item_purchases, invoices, prediction_window, training_window, lead,threshold):
+    niter = 2 #hard coded number of cutoffs we will search starting with 
+    cutoff_time = pd.Timestamp("2011-05-01") # hard coded start date 
+    label_times=pd.DataFrame()
+    for k in range(1,niter):
+        cutoff_time = cutoff_time + pd.Timedelta("45d")
+        lt = make_label_times(item_purchases, invoices, cutoff_time, prediction_window, 
+                                       training_window, lead,threshold)
+        label_times=label_times.append(lt)
+
+    label_times=label_times.sort_values('cutoff_time')
+    return label_times
+
 def make_label_times(item_purchases, invoices, cutoff_time, prediction_window, training_window, lead,threshold):
     data = item_purchases.merge(invoices)[["CustomerID", "InvoiceDate", "Quantity", "UnitPrice"]]
     data["amount"] = data["Quantity"] * data["UnitPrice"]
@@ -124,8 +138,9 @@ def make_label_times(item_purchases, invoices, cutoff_time, prediction_window, t
     # get customers in training data
     label_times = pd.DataFrame()
     label_times["CustomerID"] = training_data["CustomerID"].dropna().unique()
-    label_times["cutoff_time"] = cutoff_time
     label_times["t_start"] = t_start
+    label_times["cutoff_time"] = cutoff_time
+    
 
 
 
@@ -140,8 +155,8 @@ def make_label_times(item_purchases, invoices, cutoff_time, prediction_window, t
     label_times.rename(columns={"amount": "purchases>threshold"}, inplace=True)
     label_times['purchases>threshold']=label_times['purchases>threshold']>threshold
 
-    return label_times
-
+    
+    return label_times 
 
 def load_nyc_taxi_data():
     trips = pd.read_csv('nyc-taxi-data/trips.csv', 
@@ -177,3 +192,17 @@ def compute_features(features,cutoff_time):
                                                  cutoff_time=cutoff_time,
                                                  approximate='36d')
     return feature_matrix
+
+def engineer_features_uk_retail(entities,relationships,label_times,training_window):
+    trans_primitives = [Minute, Hour, Day, Week, Month, Weekday, Weekend]
+
+    feature_matrix,features = ft.dfs(entities=entities,
+                                     relationships=relationships,
+                                     target_entity="customers",
+                                     trans_primitives=trans_primitives,
+                                     agg_primitives=[Mean,Max,Std],
+                                     cutoff_time=label_times,
+                                     training_window=training_window)
+    feature_matrix.drop("Country", axis=1, inplace=True)
+    feature_matrix=feature_matrix.sort_index()
+    return feature_matrix 
