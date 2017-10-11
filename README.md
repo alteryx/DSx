@@ -1,5 +1,5 @@
 # DSx
-Hands on tutorials demonstrating the concepts of Prediction engineering, Feature engineering and automation in data science. In a series of notebooks, we show how we can build predictive models from raw data within a day - all using open source software. 
+Hands on tutorials demonstrating the concepts of Prediction engineering, Feature engineering and automation in data science. In a series of notebooks, we show how we can build predictive models from raw data within a day - all using open source software.
 
 
 ## Open source tools used
@@ -10,13 +10,29 @@ Hands on tutorials demonstrating the concepts of Prediction engineering, Feature
 
 ## Concepts to learn
 - `Prediction engineering`
-- `Feature engineering` 
+- `Feature engineering`
 
-## Datasets 
+## Datasets
 
 
 
-## Notebooks 
-- `NYC-Taxi-Dataset-Learn feature engineering` 
+## Notebooks
+- `NYC-Taxi-Dataset-Learn feature engineering`
 - `Retail-Dataset - Learn prediction engineering`
 
+## Installation
+Linux
+```bash
+sh install_linux.sh
+source venv/bin/activate
+pip install -r requirements.txt
+jupyter notebook
+```
+
+Mac
+```bash
+sh install_osx.sh
+source venv/bin/activate
+pip install -r requirements.txt
+jupyter notebook
+```
