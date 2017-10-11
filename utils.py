@@ -78,7 +78,7 @@ def feature_importances(model, feature_names):
                                                                           ascending=False)
 
 
-def get_train_test_fm(feature_matrix,percentage):
+def get_train_test_fm(feature_matrix, percentage):
     nrows = feature_matrix.shape[0]
     head = int(nrows * percentage)
     tail = nrows-head
@@ -86,7 +86,7 @@ def get_train_test_fm(feature_matrix,percentage):
     y_train = X_train['trip_duration']
     X_train = X_train.drop(['trip_duration'], axis=1)
     X_test = feature_matrix.tail(tail)
-    y_test= X_test['trip_duration']
+    y_test = X_test['trip_duration']
     X_test = X_test.drop(['trip_duration'], axis=1)
 
     return (X_train, y_train, X_test,y_test)
@@ -110,12 +110,12 @@ def duplicate_columns(frame):
     return dups
 
 def find_training_examples(item_purchases, invoices, prediction_window, training_window, lead,threshold):
-    niter = 2 #hard coded number of cutoffs we will search starting with 
-    cutoff_time = pd.Timestamp("2011-05-01") # hard coded start date 
+    niter = 2 #hard coded number of cutoffs we will search starting with
+    cutoff_time = pd.Timestamp("2011-05-01") # hard coded start date
     label_times=pd.DataFrame()
     for k in range(1,niter):
         cutoff_time = cutoff_time + pd.Timedelta("45d")
-        lt = make_label_times(item_purchases, invoices, cutoff_time, prediction_window, 
+        lt = make_label_times(item_purchases, invoices, cutoff_time, prediction_window,
                                        training_window, lead,threshold)
         label_times=label_times.append(lt)
 
@@ -140,7 +140,7 @@ def make_label_times(item_purchases, invoices, cutoff_time, prediction_window, t
     label_times["CustomerID"] = training_data["CustomerID"].dropna().unique()
     label_times["t_start"] = t_start
     label_times["cutoff_time"] = cutoff_time
-    
+
 
 
 
@@ -151,15 +151,15 @@ def make_label_times(item_purchases, invoices, cutoff_time, prediction_window, t
     label_times = label_times.merge(labels, how="left", left_on="CustomerID", right_index=True)
 
     # if the amount is nan that means the customer made no purchases in prediction window
-    label_times["amount"] = label_times["amount"].fillna(0) 
+    label_times["amount"] = label_times["amount"].fillna(0)
     label_times.rename(columns={"amount": "purchases>threshold"}, inplace=True)
     label_times['purchases>threshold']=label_times['purchases>threshold']>threshold
 
-    
-    return label_times 
+
+    return label_times
 
 def load_nyc_taxi_data():
-    trips = pd.read_csv('nyc-taxi-data/trips.csv', 
+    trips = pd.read_csv('nyc-taxi-data/trips.csv',
                         parse_dates=["pickup_datetime","dropoff_datetime"],
                         dtype={'vendor_id':"category",'passenger_count':'int64'},
                         encoding='utf-8')
@@ -167,14 +167,14 @@ def load_nyc_taxi_data():
                                 parse_dates=["first_trips_time"],
                                 dtype={'passenger_count':'int64'},
                                 encoding='utf-8')
-    vendors = pd.read_csv('nyc-taxi-data/vendors.csv', 
+    vendors = pd.read_csv('nyc-taxi-data/vendors.csv',
                           parse_dates=["first_trips_time"],
                           dtype={'vendor_id':"category"},
                           encoding='utf-8')
     #trips.drop("id.1", axis=1, inplace=True)
     #trips['pickup_datetime'] = pd.to_datetime(trips['pickup_datetime'] , format="%Y-%m-%d %H:%M:%S")
     #vendors['first_trips_time'] = pd.to_datetime(vendors['first_trips_time'] , format="%Y-%m-%d %H:%M:%S")
-    return trips, passenger_cnt, vendors 
+    return trips, passenger_cnt, vendors
 
 def load_uk_retail_data():
     item_purchases = pd.read_csv('uk-retail-data/item_purchases.csv')
@@ -185,7 +185,7 @@ def load_uk_retail_data():
     item_purchases['InvoiceDate'] = pd.to_datetime(item_purchases['InvoiceDate'] , format="%m/%d/%y %H:%M")
     customers['first_invoices_time'] = pd.to_datetime(customers['first_invoices_time'] , format="%m/%d/%y %H:%M")
     items['first_item_purchases_time'] = pd.to_datetime(items['first_item_purchases_time'], format="%m/%d/%y %H:%M")
-    return item_purchases, invoices, items,customers 
+    return item_purchases, invoices, items,customers
 
 def compute_features(features,cutoff_time):
     feature_matrix = ft.calculate_feature_matrix(features,
@@ -205,4 +205,4 @@ def engineer_features_uk_retail(entities,relationships,label_times,training_wind
                                      training_window=training_window)
     feature_matrix.drop("Country", axis=1, inplace=True)
     feature_matrix=feature_matrix.sort_index()
-    return feature_matrix 
+    return feature_matrix
