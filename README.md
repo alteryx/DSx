@@ -24,6 +24,7 @@ Hands on tutorials demonstrating the concepts of Prediction engineering, Feature
 Linux
 ```bash
 sh install_linux.sh
+source venv/bin/activate
 jupyter notebook
 ```
 
