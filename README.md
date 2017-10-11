@@ -25,6 +25,7 @@ Linux
 ```bash
 sh install_linux.sh
 source venv/bin/activate
+pip install -r requirements.txt
 jupyter notebook
 ```
 
@@ -32,5 +33,6 @@ Mac
 ```bash
 sh install_osx.sh
 source venv/bin/activate
+pip install -r requirements.txt
 jupyter notebook
 ```

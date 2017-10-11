@@ -9,5 +9,3 @@ sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
 sudo apt-get -y update
 sudo apt-get -y install gcc-5 g++-5
 virtualenv venv
-.venv/bin/activate
-pip install -r requirements.txt

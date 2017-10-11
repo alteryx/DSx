@@ -9,5 +9,3 @@ brew install python
 brew install gcc@5 --without-multilib
 pip install virtualenv virtualenvwrapper
 virtualenv venv
-source venv/bin/activate
-pip install -r requirements.txt
