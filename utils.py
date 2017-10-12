@@ -30,6 +30,10 @@ def read_data(TRAIN_DIR, TEST_DIR, nrows=None):
 
     return (data_train, data_test)
 
+def preview(df, n=5):
+    """return n rows that have fewest number of nulls"""
+    order = df.isnull().sum(axis=1).sort_values().head(n).index
+    return df.iloc[order]
 
 def train_xgb(X_train, labels):
     Xtr, Xv, ytr, yv = train_test_split(X_train.values,
