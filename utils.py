@@ -3,6 +3,7 @@ import xgboost as xgb
 import numpy as np
 import pandas as pd
 import featuretools as ft
+from sklearn.preprocessing import Imputer
 from featuretools.primitives import (Day, Hour, Minute, Month, Weekday, Week, Weekend, Mean, Max, Min, Std, Skew)
 
 
@@ -30,6 +31,10 @@ def read_data(TRAIN_DIR, TEST_DIR, nrows=None):
 
     return (data_train, data_test)
 
+def preview(df, n=5):
+    """return n rows that have fewest number of nulls"""
+    order = df.isnull().sum(axis=1).sort_values().head(n).index
+    return df.iloc[order]
 
 def train_xgb(X_train, labels):
     Xtr, Xv, ytr, yv = train_test_split(X_train.values,
@@ -85,9 +90,13 @@ def get_train_test_fm(feature_matrix,percentage):
     X_train = feature_matrix.head(head)
     y_train = X_train['trip_duration']
     X_train = X_train.drop(['trip_duration'], axis=1)
+    imp = Imputer()
+    X_train = imp.fit_transform(X_train)
     X_test = feature_matrix.tail(tail)
     y_test= X_test['trip_duration']
     X_test = X_test.drop(['trip_duration'], axis=1)
+    imp = Imputer()
+    X_test = imp.fit_transform(X_test)
 
     return (X_train, y_train, X_test,y_test)
 
@@ -163,6 +172,7 @@ def load_nyc_taxi_data():
                         parse_dates=["pickup_datetime","dropoff_datetime"],
                         dtype={'vendor_id':"category",'passenger_count':'int64'},
                         encoding='utf-8')
+    trips = trips.dropna(axis=0,how='any',subset=['trip_duration'])
     passenger_cnt = pd.read_csv('nyc-taxi-data/passenger_cnt.csv',
                                 parse_dates=["first_trips_time"],
                                 dtype={'passenger_count':'int64'},
@@ -171,9 +181,6 @@ def load_nyc_taxi_data():
                           parse_dates=["first_trips_time"],
                           dtype={'vendor_id':"category"},
                           encoding='utf-8')
-    #trips.drop("id.1", axis=1, inplace=True)
-    #trips['pickup_datetime'] = pd.to_datetime(trips['pickup_datetime'] , format="%Y-%m-%d %H:%M:%S")
-    #vendors['first_trips_time'] = pd.to_datetime(vendors['first_trips_time'] , format="%Y-%m-%d %H:%M:%S")
     return trips, passenger_cnt, vendors 
 
 def load_uk_retail_data():

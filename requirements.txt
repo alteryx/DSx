@@ -2,5 +2,4 @@ featuretools>=0.1.7
 jupyter==1.0.0
 pandas==0.20.1
 sklearn
-xgboost
 numpy>=1.11.0
