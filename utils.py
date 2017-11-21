@@ -3,6 +3,8 @@ import pandas as pd
 import featuretools as ft
 from sklearn.preprocessing import Imputer
 from featuretools.primitives import (Day, Hour, Minute, Month, Weekday, Week, Weekend, Mean, Max, Min, Std, Skew)
+import numpy as np
+from sklearn.cluster import KMeans
 
 
 def load_nyc_taxi_data():
@@ -19,6 +21,14 @@ def load_nyc_taxi_data():
                           parse_dates=["first_trips_time"],
                           dtype={'vendor_id':"category"},
                           encoding='utf-8')
+
+    coords = np.vstack((trips[['pickup_latitude', 'pickup_longitude']].values,
+                        trips[['dropoff_latitude', 'dropoff_longitude']].values))
+    kmeans = KMeans(n_clusters=50, verbose=True, n_jobs=-1).fit(coords)
+    letters = "abcdefghijklmnopqrstuvwxyz"
+    trips['pickup_cluster'] = kmeans.predict(trips[['pickup_latitude', 'pickup_longitude']]).map(lambda i: letters[i])
+    trips['dropoff_cluster'] = kmeans.predict(trips[['dropoff_latitude', 'dropoff_longitude']]).map(lambda i: letters[i])
+
     return trips, passenger_cnt, vendors
 
 
