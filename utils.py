@@ -6,39 +6,13 @@ from featuretools.primitives import (Day, Hour, Minute, Month, Weekday, Week, We
 import numpy as np
 from sklearn.cluster import KMeans
 
-
-def load_nyc_taxi_data():
-    trips = pd.read_csv('nyc-taxi-data/trips.csv',
-                        parse_dates=["pickup_datetime","dropoff_datetime"],
-                        dtype={'vendor_id':"category",'passenger_count':'int64'},
-                        encoding='utf-8')
-    trips = trips.dropna(axis=0, how='any', subset=['trip_duration'])
-    passenger_cnt = pd.read_csv('nyc-taxi-data/passenger_cnt.csv',
-                                parse_dates=["first_trips_time"],
-                                dtype={'passenger_count':'int64'},
-                                encoding='utf-8')
-    vendors = pd.read_csv('nyc-taxi-data/vendors.csv',
-                          parse_dates=["first_trips_time"],
-                          dtype={'vendor_id':"category"},
-                          encoding='utf-8')
-
-    coords = np.vstack((trips[['pickup_latitude', 'pickup_longitude']].values,
-                        trips[['dropoff_latitude', 'dropoff_longitude']].values))
-    kmeans = KMeans(n_clusters=50, verbose=True, n_jobs=-1).fit(coords)
-    letters = "abcdefghijklmnopqrstuvwxyz"
-    trips['pickup_cluster'] = kmeans.predict(trips[['pickup_latitude', 'pickup_longitude']]).map(lambda i: letters[i])
-    trips['dropoff_cluster'] = kmeans.predict(trips[['dropoff_latitude', 'dropoff_longitude']]).map(lambda i: letters[i])
-
-    return trips, passenger_cnt, vendors
+# set global random seed
+np.random.seed(40)
 
 
-def compute_features(features,cutoff_time):
-    feature_matrix = ft.calculate_feature_matrix(features,
-                                                 cutoff_time=cutoff_time,
-                                                 approximate='36d',
-                                                 verbose=True)
-    return feature_matrix
-
+####################
+# Case Study Utils #
+####################
 
 def preview(df, n=5):
     """return n rows that have fewest number of nulls"""
@@ -70,35 +44,73 @@ def get_train_test_fm(feature_matrix, percentage):
     return (X_train, y_train, X_test,y_test)
 
 
-def duplicate_columns(frame):
-    groups = frame.columns.to_series().groupby(frame.dtypes).groups
-    dups = []
-    for t, v in groups.items():
-        dcols = frame[v].to_dict(orient="list")
 
-        vs = dcols.values()
-        ks = dcols.keys()
-        lvs = len(vs)
+##################
+# Case Study 6.1 #
+##################
 
-        for i in range(lvs):
-            for j in range(i+1,lvs):
-                if vs[i] == vs[j]:
-                    dups.append(ks[i])
-                    break
-    return dups
+def column_string(n):
+    string = ""
+    while n > 0:
+        n, remainder = divmod(n - 1, 26)
+        string = chr(65 + remainder) + string
+    return string
 
+def load_nyc_taxi_data():
+    trips = pd.read_csv('nyc-taxi-data/trips.csv',
+                        parse_dates=["pickup_datetime","dropoff_datetime"],
+                        dtype={'vendor_id':"category",'passenger_count':'int64'},
+                        encoding='utf-8')
+    trips["payment_type"] = trips["payment_type"].apply(str)
+    trips = trips.dropna(axis=0, how='any', subset=['trip_duration'])
+
+    pickup_neighborhoods = pd.read_csv("nyc-taxi-data/pickup_neighborhoods.csv", encoding='utf-8')
+    dropoff_neighborhoods = pd.read_csv("nyc-taxi-data/dropoff_neighborhoods.csv", encoding='utf-8')
+
+    return trips, pickup_neighborhoods, dropoff_neighborhoods
+
+
+def compute_features(features, cutoff_time):
+    # shuffle so we don't see encoded features in the front or backs
+
+    np.random.shuffle(features)
+    feature_matrix = ft.calculate_feature_matrix(features,
+                                                 cutoff_time=cutoff_time,
+                                                 approximate='36d',
+                                                 verbose=True)
+    print "Finishing computing..."
+    feature_matrix, features = ft.encode_features(feature_matrix, features,
+                                                  to_encode=["pickup_neighborhood", "dropoff_neighborhood"],
+                                                  include_unknown=False)
+    return feature_matrix
+
+
+##################
+# Case Study 6.2 #
+##################
+
+def load_uk_retail_data():
+    item_purchases = pd.read_csv('uk-retail-data/item_purchases.csv')
+    invoices = pd.read_csv('uk-retail-data/invoices.csv')
+    items = pd.read_csv('uk-retail-data/items.csv')
+    customers = pd.read_csv('uk-retail-data/customers.csv')
+    invoices['first_item_purchases_time'] = pd.to_datetime(invoices['first_item_purchases_time'] , format="%m/%d/%y %H:%M")
+    item_purchases['InvoiceDate'] = pd.to_datetime(item_purchases['InvoiceDate'] , format="%m/%d/%y %H:%M")
+    customers['first_invoices_time'] = pd.to_datetime(customers['first_invoices_time'] , format="%m/%d/%y %H:%M")
+    items['first_item_purchases_time'] = pd.to_datetime(items['first_item_purchases_time'], format="%m/%d/%y %H:%M")
+    return item_purchases, invoices, items, customers
 
 def find_training_examples(item_purchases, invoices, prediction_window, training_window, lead,threshold):
-    niter = 2 #hard coded number of cutoffs we will search starting with
+    niter = 2 # hard coded number of cutoffs we will search starting with
     cutoff_time = pd.Timestamp("2011-05-01") # hard coded start date
-    label_times=pd.DataFrame()
-    for k in range(1,niter):
+    label_times = pd.DataFrame()
+    for k in range(1, niter):
         cutoff_time = cutoff_time + pd.Timedelta("45d")
         lt = make_label_times(item_purchases, invoices, cutoff_time, prediction_window,
-                                       training_window, lead,threshold)
-        label_times=label_times.append(lt)
+                              training_window, lead, threshold)
+        label_times = label_times.append(lt)
 
-    label_times=label_times.sort_values('cutoff_time')
+    label_times = label_times.sort_values('cutoff_time')
     return label_times
 
 
@@ -136,16 +148,6 @@ def make_label_times(item_purchases, invoices, cutoff_time, prediction_window, t
     return label_times
 
 
-def load_uk_retail_data():
-    item_purchases = pd.read_csv('uk-retail-data/item_purchases.csv')
-    invoices = pd.read_csv('uk-retail-data/invoices.csv')
-    items = pd.read_csv('uk-retail-data/items.csv')
-    customers = pd.read_csv('uk-retail-data/customers.csv')
-    invoices['first_item_purchases_time'] = pd.to_datetime(invoices['first_item_purchases_time'] , format="%m/%d/%y %H:%M")
-    item_purchases['InvoiceDate'] = pd.to_datetime(item_purchases['InvoiceDate'] , format="%m/%d/%y %H:%M")
-    customers['first_invoices_time'] = pd.to_datetime(customers['first_invoices_time'] , format="%m/%d/%y %H:%M")
-    items['first_item_purchases_time'] = pd.to_datetime(items['first_item_purchases_time'], format="%m/%d/%y %H:%M")
-    return item_purchases, invoices, items, customers
 
 
 def engineer_features_uk_retail(entities, relationships, label_times, training_window):
